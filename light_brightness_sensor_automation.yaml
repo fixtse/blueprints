@@ -1,0 +1,85 @@
+blueprint:
+  name: Luz controlada por sensor de Luminosidad
+  description: Enciende una luz y ajusta el brillo de acuerdo a la luminosidad.
+  #source_url:
+  domain: automation
+  input:
+    illuminance_sensor:
+      name: Sensor de Luminosidad
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    target_light:
+      name: Foco
+      selector:
+        entity:
+          domain: light
+    max_brightness:
+      name: Brillo Máximo
+      description: Limita el máximo nivel de brillo del foco
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    brightness_trigger_light_off:
+      name: Límite de iluminación para encender la luz
+      description: Cuando la luminosidad se encuentre bajo este nivel, la luz se encenderá
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lx
+    transition_time:
+      name: Tiempo de Transición
+      description: Tiempo que tardará la luz en cambiar de brillo.
+      default: 4
+      selector:
+        number:
+          min: 0
+          max: 10
+          unit_of_measurement: seg
+    control_light:
+      name: Control
+      description: Ayudante para activar y desactivar la automatización de forma sencilla.
+      selector:
+        entity:
+          domain: input_boolean
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input illuminance_sensor
+  - platform: state
+    entity_id: !input control_light
+
+condition:
+  - condition: state
+    entity_id: !input control_light
+    state: "off"
+
+variables:
+  lux_sensor: !input illuminance_sensor
+  lux: "{{ states(lux_sensor) |int }}"
+
+  max_brg: !input max_brightness
+  brg_tg_off: !input brightness_trigger_light_off
+  light: !input target_light
+  brightness: >-
+    {% if lux >= brg_tg_off %} 
+      0 
+    {% else%}
+       {{ (brg_tg_off - lux) / (brg_tg_off / 100) | float  }}          
+    {% endif %}
+
+action:
+  - service: light.turn_on
+    target: !input target_light
+    data:
+      brightness_pct: "{{ ((max_brg * brightness) / 100) | int }}"
+      transition: !input transition_time

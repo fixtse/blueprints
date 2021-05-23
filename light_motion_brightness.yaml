@@ -1,0 +1,119 @@
+blueprint:
+  name: Luz controlada por movimiento y brillo
+  description: Enciende una luz cuando hay movimiento y ajusta el brillo de acuerdo a la luminosidad.
+  domain: automation
+  #source_url: 
+  input:
+    motion_sensor:
+      name: Motion Sensor
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: motion
+    illuminance_sensor:
+      name: Lux/Brightness Sensor
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    target_light:
+      name: Foco
+      selector:
+        entity:
+          domain: light
+    brightness_trigger_light_off:
+      name: Límite de iluminación para encender la luz
+      description: Cuando la luminosidad se encuentre bajo este nivel, la luz se encenderá
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lx
+    brightness_trigger_light_on:
+      name: Límite de iluminación apagar la luz
+      description: Cuando la luminosidad se encuentre sobre este nivel, la luz se apagará
+      default: 80
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lx
+    transition_time:
+      name: Tiempo de Transición
+      description: Tiempo que tardará la luz en cambiar de brillo.
+      default: 4
+      selector:
+        number:
+          min: 0
+          max: 10
+          unit_of_measurement: seg
+    no_motion_wait:
+      name: Tiempo de espera
+      description: Tiempo a esperar para apagar la luz luego de no detectar movimiento
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seg
+    control_light:
+      name: Control
+      description: Ayudante para activar y desactivar la automatización de forma sencilla.
+      selector:
+        entity:
+          domain: input_boolean
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input motion_sensor
+    from: "off"
+    to: "on"
+
+variables:
+  lux_sensor: !input illuminance_sensor
+  lux: "{{ states(lux_sensor) |int }}"
+
+  max_brg: !input max_brightness
+  brg_tg_off: !input brightness_trigger_light_off
+  brg_tg_on: !input brightness_trigger_light_on
+  light: !input target_light
+  brightness: >-
+    {%- if is_state(light.entity_id, 'off') -%}
+      {% if lux >= brg_tg_off %} 
+        0 
+      {% else%}
+         {{ (brg_tg_off - lux) / (brg_tg_off / 100) | float  }}          
+      {% endif %}
+    {%- else -%}
+      {% if lux >= brg_tg_on %} 
+        0 
+      {% else%}
+         {{ (brg_tg_on - lux) / (brg_tg_on / 100) | float  }}          
+      {% endif %}
+    {%- endif -%}
+
+condition:
+  - condition: state
+    entity_id: !input control_light
+    state: "off"
+  - condition: template
+    value_template: "{{ trigger.entity_id != lux_sensor.entity_id or is_state(light.entity_id, 'on')}}\n"
+
+action:
+  - service: light.turn_on
+    target: !input target_light
+    data:
+      brightness_pct: "{{ ((max_brg * brightness) / 100) | int }}"
+      transition: !input transition_time
+  - wait_for_trigger:
+      platform: state
+      entity_id: !input motion_sensor
+      from: "on"
+      to: "off"
+  - delay: !input no_motion_wait
+  - service: light.turn_off
+    target: !input target_light
