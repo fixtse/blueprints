@@ -2,7 +2,7 @@ blueprint:
   name: Luz controlada por movimiento y brillo
   description: Enciende una luz cuando hay movimiento y ajusta el brillo de acuerdo a la luminosidad.
   domain: automation
-  #source_url: 
+  source_url: https://github.com/fixtse/blueprints/blob/main/light_motion_brightness.yaml
   input:
     motion_sensor:
       name: Motion Sensor
@@ -25,15 +25,6 @@ blueprint:
       name: Límite de iluminación para encender la luz
       description: Cuando la luminosidad se encuentre bajo este nivel, la luz se encenderá
       default: 30
-      selector:
-        number:
-          min: 0
-          max: 1000
-          unit_of_measurement: lx
-    brightness_trigger_light_on:
-      name: Límite de iluminación apagar la luz
-      description: Cuando la luminosidad se encuentre sobre este nivel, la luz se apagará
-      default: 80
       selector:
         number:
           min: 0
@@ -72,6 +63,8 @@ trigger:
     entity_id: !input motion_sensor
     from: "off"
     to: "on"
+  - platform: state
+    entity_id: !input control_light
 
 variables:
   lux_sensor: !input illuminance_sensor
@@ -79,29 +72,20 @@ variables:
 
   max_brg: !input max_brightness
   brg_tg_off: !input brightness_trigger_light_off
-  brg_tg_on: !input brightness_trigger_light_on
   light: !input target_light
   brightness: >-
-    {%- if is_state(light.entity_id, 'off') -%}
-      {% if lux >= brg_tg_off %} 
-        0 
-      {% else%}
-         {{ (brg_tg_off - lux) / (brg_tg_off / 100) | float  }}          
-      {% endif %}
-    {%- else -%}
-      {% if lux >= brg_tg_on %} 
-        0 
-      {% else%}
-         {{ (brg_tg_on - lux) / (brg_tg_on / 100) | float  }}          
-      {% endif %}
-    {%- endif -%}
+    {% if lux >= brg_tg_off %} 
+      0 
+    {% else%}
+       {{ (150 - lux) / (150 / 100) | float  }}          
+    {% endif %}
 
 condition:
   - condition: state
     entity_id: !input control_light
     state: "off"
   - condition: template
-    value_template: "{{ trigger.entity_id != lux_sensor.entity_id or is_state(light.entity_id, 'on')}}\n"
+    value_template: "{{ trigger.entity_id != lux_sensor.entity_id or is_state(light.entity_id, 'on')}}"
 
 action:
   - service: light.turn_on
@@ -117,3 +101,5 @@ action:
   - delay: !input no_motion_wait
   - service: light.turn_off
     target: !input target_light
+    data:
+      transition: !input transition_time

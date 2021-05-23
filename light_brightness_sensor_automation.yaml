@@ -1,7 +1,7 @@
 blueprint:
   name: Luz controlada por sensor de Luminosidad
   description: Enciende una luz y ajusta el brillo de acuerdo a la luminosidad.
-  #source_url:
+  source_url: https://github.com/fixtse/blueprints/blob/main/light_brightness_sensor_automation.yaml
   domain: automation
   input:
     illuminance_sensor:
@@ -28,6 +28,15 @@ blueprint:
       name: Límite de iluminación para encender la luz
       description: Cuando la luminosidad se encuentre bajo este nivel, la luz se encenderá
       default: 30
+      selector:
+        number:
+          min: 0
+          max: 1000
+          unit_of_measurement: lx
+    brightness_trigger_light_on:
+      name: Límite de iluminación apagar la luz
+      description: Cuando la luminosidad se encuentre sobre este nivel, la luz se apagará
+      default: 80
       selector:
         number:
           min: 0
@@ -66,16 +75,24 @@ condition:
 variables:
   lux_sensor: !input illuminance_sensor
   lux: "{{ states(lux_sensor) |int }}"
-
+  brg_tg_on: !input brightness_trigger_light_on
   max_brg: !input max_brightness
   brg_tg_off: !input brightness_trigger_light_off
   light: !input target_light
   brightness: >-
-    {% if lux >= brg_tg_off %} 
-      0 
-    {% else%}
-       {{ (brg_tg_off - lux) / (brg_tg_off / 100) | float  }}          
-    {% endif %}
+    {%- if is_state(light.entity_id, 'off') -%}
+      {% if lux >= brg_tg_off %} 
+        0 
+      {% else%}
+         {{ (150 - lux) / (150 / 100) | float  }}          
+      {% endif %}
+    {%- else -%}
+      {% if lux >= brg_tg_on %} 
+        0 
+      {% else%}
+         {{ (150 - lux) / (150 / 100) | float  }}          
+      {% endif %}
+    {%- endif -%}
 
 action:
   - service: light.turn_on
