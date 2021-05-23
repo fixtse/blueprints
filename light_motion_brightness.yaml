@@ -21,6 +21,15 @@ blueprint:
       selector:
         entity:
           domain: light
+    max_brightness:
+      name: Brillo Máximo
+      description: Limita el máximo nivel de brillo del foco
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
     brightness_trigger_light_off:
       name: Límite de iluminación para encender la luz
       description: Cuando la luminosidad se encuentre bajo este nivel, la luz se encenderá
