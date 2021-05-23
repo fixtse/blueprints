@@ -5,13 +5,13 @@ blueprint:
   source_url: https://github.com/fixtse/blueprints/blob/main/light_motion_brightness.yaml
   input:
     motion_sensor:
-      name: Motion Sensor
+      name: Sensor de Movimiento
       selector:
         entity:
           domain: binary_sensor
           device_class: motion
     illuminance_sensor:
-      name: Lux/Brightness Sensor
+      name: Sensor de Luminosidad 
       selector:
         entity:
           domain: sensor
