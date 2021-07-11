@@ -1,6 +1,7 @@
 blueprint:
   name: Apaga el cargador cuando el sensor de potencia llegue al umbral
   description: Cuando la batería esté cargada, la cantidad de energia usada por el cargador disminuirá al valor elegido y esto hará que el enchufe inteligente se apague para cuidar vida util de la batería de tu teléfono.
+  source_url: https://github.com/fixtse/blueprints/blob/main/charging_power_lever_sensor.yaml
   domain: automation
   input:
     charger_relay:

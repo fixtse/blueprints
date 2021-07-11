@@ -1,6 +1,7 @@
 blueprint:
   name: Apaga el cargador cuando finalice la carga
   description: Apagar el cargador cuando el teléfono ha alcanzado un % de carga
+  source_url: https://github.com/fixtse/blueprints/blob/main/charging_battery_level.yaml
   domain: automation
   input:
     switch:
