@@ -1,0 +1,53 @@
+blueprint:
+  name: Apaga el cargador cuando finalice la carga
+  description: Apagar el cargador cuando el teléfono ha alcanzado un % de carga
+  domain: automation
+  input:
+    switch:
+      name: Enchufe inteligente
+      description: El enchufe que controla al cargador
+      selector:
+        entity:
+          domain: switch
+
+    phone_battery:
+      name: Batería del teléfono
+      description: Sensor de nivel de batería
+      selector:
+        entity:
+          domain: sensor
+          device_class: battery
+
+    charged_percent:
+      name: Porcentaje de carga
+      description: Porcentaje de carga del teléfono
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: "box"
+      default: 100
+    actions:
+      name: Que hacer
+      description: Que hacer después de terminar la carga, quizá enviar un mensaje a la aplicación en tu teléfono o utilizar algún altavoz inteligente?
+      selector:
+        action:
+
+variables:
+  phone_battery: !input phone_battery
+  charged_percent: !input charged_percent
+
+trigger:
+  - platform: state
+    entity_id: !input phone_battery
+
+condition:
+  condition: template
+  value_template: "{{ (states(phone_battery)|int) >= (charged_percent|int) }}"
+
+action:
+  - service: switch.turn_off
+    entity_id: !input switch
+  - choose:
+    default: !input actions

@@ -1,0 +1,48 @@
+blueprint:
+  name: Apaga el cargador cuando finalice la carga
+  description: Cuando la batería esté cargada, la cantidad de energia usada por el cargador disminuirá al valor elegido y esto hará que el enchufe inteligente se apague para cuidar vida util de la batería de tu teléfono.
+  domain: automation
+  input:
+    charger_relay:
+      name: Enchufe inteligente
+      description: El enchufe que controla al cargador
+      selector:
+        entity:
+          domain: switch
+    charger_wattage:
+      name: Sensor de Potencia
+      description: Sensor que muestra la potencia de energia siendo consumida por el cargador
+      selector:
+        entity:
+          domain: sensor
+    wattage_threshold:
+      name: Umbral de potencia
+      description: Cuanto poder utiliza el cargador cuando el dispositivo se encuentra cargado
+      default: 6
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 1
+          unit_of_measurement: Watt
+    actions:
+      name: Que hacer
+      description: Que hacer después de terminar la carga, quizá enviar un mensaje a la aplicación en tu teléfono o utilizar algún altavoz inteligente?
+      selector:
+        action:
+
+trigger:
+  - below: !input wattage_threshold
+    entity_id: !input charger_wattage
+    platform: numeric_state
+
+condition:
+  - condition: state
+    entity_id: !input charger_relay
+    state: 'on'
+
+action:
+  - entity_id: !input charger_relay
+    service: switch.turn_off
+  - choose:
+    default: !input actions
