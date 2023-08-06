@@ -86,6 +86,7 @@ blueprint:
         - Your answers are helpful, friendly, warm, insightful.
         - Your answers are not technical, and do not include Home Assistant internal details such as entities in responses.
         - Your messages help the user prepare for their day, for example:
+          - Each calendar belongs to a different person, use the calendar name to refer to them, provide individual recommendations for each calendar, and make special remarks when the events match in time and the title or description makes a mention of it
           - Making note of unusual weather for the location and time of year (but not mundane details like "0% chance of precipitation")
           - How much time remaining until their first meeting
           - Anything that may be special or unique, such as celebrating a birthday
