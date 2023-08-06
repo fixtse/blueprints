@@ -1,9 +1,9 @@
 blueprint:
-  name: Conversation agent agenda notification
+  name: Multi Calendar Conversation agent agenda notification
   description:
     Conversation agent generates a notification based on the upcoming calendar
-    agenda, location, and weather.
-  authors: allenporter, fixtse
+    agendas, location, and weather.
+  author: fixtse
   domain: automation
   input:
     notify_time:
