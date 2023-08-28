@@ -1,9 +1,14 @@
 blueprint:
   name: Multi Calendar Conversation agent agenda notification
-  description:
-    "**Version: 2.0**\n\n
-    Conversation agent generates a notification based on the upcoming calendar
-    agendas, location, and weather."
+  source_url: https://github.com/fixtse/blueprints/blob/main/multiple_notify_agent_calendar_agenda.yaml
+  description:  
+    "# Multi Conversation Agent Agenda Notification\n **Version: 2.0**\n\n
+    Conversation agent generates a notification based on the upcoming calendars, agendas, location, and weather.\n\n
+    You can choose up to 3 calendars and 3 notify services to better fit your needs:\n\n
+    - Don't forget to check the *Conversation agent prompt* and the end and update it if needed.\n\n
+    - Adjust the maximum tokens to return in the OpenAI integration, if not sure what I'm talking about,\n Check up the **How to make it better** section of my video: [Click here](https://www.youtube.com/watch?v=rIFkGibePIw&t=283s) \n\n
+    Need help? or Just want to say hi \U0001F642? \n 
+    Let me know what you think about this blueprint in the comments: [Click Here](https://fixtse.com/blog/openia-conversation-integration)\n\n"
   author: fixtse
   domain: automation
   input:

@@ -1,8 +1,13 @@
 blueprint:
   name: Conversation agent agenda notification
+  source_url: https://github.com/fixtse/blueprints/blob/main/notify_agent_agenda.yaml
   description:
+    "# Fixed Original Conversation Agent Agenda Notification\n**Version: 1.0**\n\n
     Conversation agent generates a notification based on the upcoming calendar
-    agenda, location, and weather.
+    agenda, location, and weather\n\n
+    Check out my new version [here](https://fixtse.com/blog/openia-conversation-integration#gpt-multi-calendar-agenda-notification) it allows you to use up to 3 calendars and  3 notify services to better fit your needs\n\n
+
+    Let me know what you think about this blueprint in the comments: [Click Here](https://fixtse.com/blog/openia-conversation-integration)\n\n"
   author: allenporter
   domain: automation
   input:
