@@ -2,7 +2,7 @@ blueprint:
   name: Multi Calendar Conversation agent agenda notification
   source_url: https://github.com/fixtse/blueprints/blob/main/multiple_notify_agent_calendar_agenda.yaml
   description:  
-    "# Multi Calendar Conversation Agent Agenda Notification\n **Version: 2.0**\n\n
+    "# Multi Calendar Conversation Agent Agenda Notification\n **Version: 2.1**\n\n
     Conversation agent generates a notification based on the upcoming calendars, agendas, location, and weather.\n\n
     You can choose up to 3 calendars and 3 notify services to better fit your needs:\n\n
     - Don't forget to check the *Conversation agent prompt* and the end and update it if needed.\n\n
@@ -220,7 +220,7 @@ action:
         {%- if agenda_1.events %}
           {%- for event in agenda_1.events %}
           - Summary: {{ event.summary }}
-            Start-End: {% if event.start is defined %}{{ event.start }} to {{ event.end }}{% else %}All Day{% endif %}
+            Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
             {%- if event.description is defined %}
             Description: {{ event.description }}
             {% endif -%}
@@ -237,7 +237,7 @@ action:
           {%- if agenda_2.events %}
             {%- for event in agenda_2.events %}
             - Summary: {{ event.summary }}
-              Start-End: {% if event.start is defined %}{{ event.start }} to {{ event.end }}{% else %}All Day{% endif %}
+              Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
               {%- if event.description is defined %}
               Description: {{ event.description }}
               {% endif -%}
@@ -255,7 +255,7 @@ action:
           {%- if agenda_3.events %}
             {%- for event in agenda_3.events %}
             - Summary: {{ event.summary }}
-              Start-End: {% if event.start is defined %}{{ event.start }} to {{ event.end }}{% else %}All Day{% endif %}
+              Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
               {%- if event.description is defined %}
               Description: {{ event.description }}
               {% endif -%}
