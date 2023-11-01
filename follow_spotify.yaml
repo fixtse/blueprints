@@ -37,7 +37,7 @@ blueprint:
   source_url: https://github.com/fixtse/blueprints/blob/main/follow_spotify.yaml
 variables:
   media_player: !input media_player
-  uri: !input playlist
+  uri: !input uri
   shuffle: !input shuffle
 sequence:
   - choose:
