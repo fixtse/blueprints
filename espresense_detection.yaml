@@ -53,7 +53,8 @@ action:
             target:
               entity_id: !input "person_input_select"
             data:
-              option: "{{ trigger.to_state.state | replace("_", " ") | title }}"
+              option: >-
+                {{ trigger.to_state.state | replace("_", " ") | title }}
       - conditions:
           - condition: state
             entity_id: !input "person_ble_tracker"
