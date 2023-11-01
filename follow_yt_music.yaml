@@ -7,7 +7,6 @@ blueprint:
     yt_music_player:
       name: YT Music Player
       description: Youtube Music Media Player
-      example: media_player.ytube_music
       selector:
         entity:
           domain: media_player
@@ -15,7 +14,6 @@ blueprint:
     media_player:
       name: Media Player
       description: Media Player to Play the music
-      example: media_player.livingroom
       selector:
         entity:
           domain: media_player
@@ -36,7 +34,6 @@ blueprint:
     playlist:
       name: PlayList
       description: The ID of the playlist to play
-      example: RDCLAK5uy_mplKe9BIYCO3ZuNWSHZr48bm9DUDzbWnE
       selector:
         text: null
   source_url: https://github.com/fixtse/blueprints/blob/main/follow_yt_music.yaml
