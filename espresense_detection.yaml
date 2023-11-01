@@ -64,4 +64,4 @@ action:
               entity_id: !input "person_input_select"
             data:
               option: Away
-mode: single
+mode: queued
