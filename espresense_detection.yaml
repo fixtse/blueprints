@@ -1,0 +1,67 @@
+blueprint:
+  name: "ESPresense: Status Update"
+  description: ESPresense Detection Blueprint
+  domain: automation
+  input:
+    person_ble_tracker:
+      name: ESPresense BLE Tracker
+      description: The ESPresense BLE tracker for the person
+      selector:
+        entity:
+          domain: sensor
+    person_input_select:
+      name: Input select
+      description: This is the input select that tracks the person's status
+      selector:
+        entity:
+          domain: input_select
+    espresense_tolerance_time:
+      name: ESPresense Tolerance Time
+      description: How long to wait before consider someone in a diferent room
+      default: 2
+      selector:
+        number:
+          min: 0.0
+          max: 10.0
+          unit_of_measurement: minutes
+          step: 1.0
+          mode: slider
+  source_url: https://github.com/fixtse/blueprints/blob/main/espresense_detection.yaml
+variables:
+  espresense_tolerance_time: !input espresense_tolerance_time
+trigger:
+  - platform: state
+    entity_id: !input "person_ble_tracker"
+    id: ble_tracker
+condition: []
+action:
+  - choose:
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: !input "person_input_select"
+                state: Away
+              - condition: template
+                value_template: >-
+                  {{ ((as_timestamp(now()) -
+                  as_timestamp(trigger.to_state.last_changed)) / 60) | round(0)
+                  >= espresense_tolerance_time }}
+                enabled: true
+        sequence:
+          - service: input_select.select_option
+            target:
+              entity_id: !input "person_input_select"
+            data:
+              option: "{{ trigger.to_state.state | replace("_", " ") | title }}"
+      - conditions:
+          - condition: state
+            entity_id: !input "person_ble_tracker"
+            state: not_home
+        sequence:
+          - service: input_select.select_option
+            target:
+              entity_id: !input "person_input_select"
+            data:
+              option: Away
+mode: single

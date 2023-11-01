@@ -1,0 +1,185 @@
+blueprint:
+  name: ChatGPT vat mijn agenda samen!
+  description:
+    Conversation agent generates a notification based on the upcoming calendar
+    agenda, location, and weather.
+  author: fixtse
+  domain: automation
+  input:
+    notify_time:
+      name: Notification time
+      description: Time the automation is triggered to send the notification.
+      selector:
+        time: {}
+      default: 08:15:00
+    media_player_service:
+      name: Media Player to use
+      description:
+        The name of the Media Player where the notification should be
+        played.
+      default: []
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - media_player
+    work_calendar_entity:
+      name: Work Calendar
+      description: The work calendar entity to use for finding upcoming calendar events.
+      selector:
+        entity:
+          multiple: false
+          filter:
+          - domain:
+            - calendar
+    private_calendar_entity:
+      name: Private calendar
+      description: The private calendar entity to use for finding upcoming calendar events.
+      selector:
+        entity:
+          multiple: false
+          filter:
+          - domain:
+            - calendar  
+    calendar_duration:
+      name: Calendar event duration
+      description: How many hours ahead to look for upcoming calendar events.
+      selector:
+        duration:
+      default:
+        hours: 18
+    weather_entity:
+      name: Weather entity
+      description: The weather entity to use for upcoming weather forecast.
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - weather
+    zone_entity:
+      name: Home zone entity
+      description:
+        The zone entity to use to determine approximate location for understanding
+        typical weather.
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - zone
+    conversation_agent:
+      name: Conversation agent
+      description: |-
+        The conversation agent to use for generating the notification text.
+        This should be a OpenAI conversation agent for this Blueprint to work.
+      selector:
+        conversation_agent:
+    prompt:
+      name: Conversation agent prompt
+      selector:
+        text:
+          multiline: true
+          type: text
+      default: |-
+        Generate a personal, informal and helpfull information overview for the day:
+          - Your answers are helpful, friendly, warm, insightful.
+          - Do not list work and private events separately.
+          - Calendar events that do not have a specific start and end time component are considered as all-day reminders for the start date and not the end-date.
+          - Do not report rejected meetings and events.
+          - Do not use abbreviations like C for Celsius.
+        
+        Your messages help the user prepare for their day, for example:
+          - Making note of unusual weather for the location and time of year (but not mundane details like "0% chance of precipitation" and report temperatures without decimals).
+          - Anything that may be special or unique, such as celebrating a birthday or a local or international holiday.
+          - Report all day events as separate reminders and not as appointments or events.
+          - Inform me about the begin time or the first event of the day (Excluding all day and rejected events).
+          - If there are important events like vacation, leave, local holidays or birthdays tomorrow, pro-actively inform me about them.
+       
+        Your answers should not contain any technical information, references to sources.
+        Do not include Home Assistant internal details such as entities in responses, please always answer in the Dutch language.
+trigger:
+  platform: time
+  at: !input notify_time
+
+action:
+  - variables:
+      weather_entity: !input weather_entity
+      private_calendar_entity: !input private_calendar_entity
+      work_calendar_entity: !input work_calendar_entity
+      zone_entity: !input zone_entity
+      calendar_duration: !input calendar_duration
+      prompt: !input prompt
+  - alias: Fetch Private Calendar Agenda
+    service: calendar.list_events
+    data:
+      duration: !input calendar_duration
+    target:
+      entity_id: !input private_calendar_entity
+    response_variable: private_agenda
+  - alias: Fetch Work Calendar Agenda
+    service: calendar.list_events
+    data:
+      duration: !input calendar_duration
+    target:
+      entity_id: !input work_calendar_entity
+    response_variable: work_agenda    
+  - alias: "Conversation Agent Notification Text"
+    service: conversation.process
+    data:
+      text: |-
+        Time: {{ now() }}
+        {%- if zone_entity is defined %}
+        Latitude: {{ state_attr(zone_entity, 'latitude') | round(1) }}
+        Longitude: {{ state_attr(zone_entity, 'longitude') | round(1) }}
+        {% endif %}
+
+        {%- if weather_entity is defined %}
+        {%- set forecast = state_attr(weather_entity, 'forecast')[0] %}
+        {%- set temperature_unit = state_attr(weather_entity, 'temperature_unit') -%}
+        Weather: {{ forecast.condition }} ({{ forecast.temperature }}{{ temperature_unit }}, {{ forecast.precipitation }}% precipitation)
+        {%- endif %}
+
+        Private Calendar:
+        {%- if private_agenda.events %}
+          {%- for event in private_agenda.events %}
+          - Summary: {{ event.summary }}
+            Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
+            {%- if event.descripton is defined %}
+            Descripton: {{ event.descripton }}
+            {% endif -%}
+            {%- if event.location is defined %}
+              Location: {{ event.location }}
+            {% endif -%}
+          {%- endfor %}
+        {%- else %}
+          - No upcoming events.
+        {%- endif %}
+
+        Work Calendar:
+        {%- if work_agenda.events %}
+          {%- for event in work_agenda.events %}
+          - Summary: {{ event.summary }}
+            Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
+            {%- if event.descripton is defined %}
+            Descripton: {{ event.descripton }}
+            {% endif -%}
+            {%- if event.location is defined %}
+              Location: {{ event.location }}
+            {% endif -%}
+          {%- endfor %}
+        {%- else %}
+          - No upcoming events.
+        {%- endif %}
+
+        {{ prompt }}
+      agent_id: !input conversation_agent
+    response_variable: agent
+  - alias: "Send notification to media device"
+    service: tts.google_translate_say
+    data:
+      entity_id: !input media_player_service
+      message: "{{ agent.response.speech.plain.speech }}"
+      language: en
+      cache: false
