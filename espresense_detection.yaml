@@ -1,6 +1,6 @@
 blueprint:
   name: "ESPresense: Status Update"
-  description: ESPresense Detection Blueprint
+  description: "**Version: 1.0**\n\nESPresense Detection Blueprint"
   author: fixtse
   domain: automation
   input:

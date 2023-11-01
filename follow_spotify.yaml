@@ -1,0 +1,74 @@
+blueprint:
+  name: "Room Music Follow - Spotify"
+  description: "**Version: 1.0**\n\n Make Spotify Follow Around Your Home"
+  author: fixtse
+  domain: script
+  input:
+    spotify_player:
+      name: Spotify Player
+      description: Spotify Media Player
+      selector:
+        entity:
+          domain: media_player
+    media_player:
+      name: Media Player
+      description: Media Player to Play the music
+      selector:
+        entity:
+          domain: media_player
+    shuffle:
+      name: Shuffle
+      default: disable_shuffle
+      selector:
+        select:
+          options:
+          - label: Enable
+            value: enable_shuffle
+          - label: Disable
+            value: disable_shuffle
+          multiple: false
+          custom_value: false
+          sort: false
+    uri:
+      name: URI
+      description: The URI of the playlist to play
+      selector:
+        text: null
+  source_url: https://github.com/fixtse/blueprints/blob/main/follow_spotify.yaml
+variables:
+  media_player: !input media_player
+  uri: !input playlist
+  shuffle: !input shuffle
+sequence:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input spotify_player
+            state: playing
+        sequence:
+          - service: spotcast.start
+            data:
+              entity_id: "{{ media_player }}"
+              force_playback: true
+    default:      
+      - if:
+        - condition: template
+          value_template: '{{ ''enable_shuffle''
+                    in shuffle }}'
+        then:
+        - service: spotcast.start
+          data:
+            entity_id: "{{ media_player }}"
+            shuffle: true
+            random_song: true
+            force_playback: true
+            uri: "{{ uri }}"
+        else:
+        - service: spotcast.start
+          data:
+            entity_id: "{{ media_player }}"
+            shuffle: false
+            random_song: true
+            force_playback: true
+            uri: "{{ uri }}"
+mode: queued
