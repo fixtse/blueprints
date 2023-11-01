@@ -1,6 +1,6 @@
 blueprint:
   name: "Room Music Follow - Spotify"
-  description: "**Version: 1.0**\n\n Make Spotify Follow Around Your Home"
+  description: "**Version: 1.0**\n\n Make Spotify Follow You Around Your Home"
   author: fixtse
   domain: script
   input:
