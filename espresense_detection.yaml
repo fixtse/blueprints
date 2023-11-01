@@ -1,6 +1,7 @@
 blueprint:
   name: "ESPresense: Status Update"
   description: ESPresense Detection Blueprint
+  author: fixtse
   domain: automation
   input:
     person_ble_tracker:
