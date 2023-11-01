@@ -36,6 +36,7 @@ blueprint:
       description: The ID of the playlist to play
       selector:
         text: null
+      required: true
   source_url: https://github.com/fixtse/blueprints/blob/main/follow_yt_music.yaml
 variables:
   media_player: !input media_player
