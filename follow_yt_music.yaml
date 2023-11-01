@@ -1,0 +1,85 @@
+blueprint:
+  name: "Room Music Follow - YT Music"
+  description: Make YT Music Follow Around Your Home
+  author: fixtse
+  domain: script
+  input:
+    yt_music_player:
+      name: YT Music Player
+      description: Youtube Music Media Player
+      example: media_player.ytube_music
+      selector:
+        entity:
+          domain: media_player
+      required: true
+    media_player:
+      name: Media Player
+      description: Media Player to Play the music
+      example: media_player.livingroom
+      selector:
+        entity:
+          domain: media_player
+      required: true
+    shuffle:
+      name: Shuffle
+      default: disable_shuffle
+      selector:
+        select:
+          options:
+          - label: Enable
+            value: enable_shuffle
+          - label: Disable
+            value: disable_shuffle
+          multiple: false
+          custom_value: false
+          sort: false
+    playlist:
+      name: PlayList
+      description: The ID of the playlist to play
+      example: RDCLAK5uy_mplKe9BIYCO3ZuNWSHZr48bm9DUDzbWnE
+      selector:
+        text: null
+  source_url: https://github.com/fixtse/blueprints/blob/main/follow_yt_music.yaml
+variables:
+  media_player: !input media_player
+  playlist: !input playlist
+  shuffle: !input shuffle
+sequence:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input yt_music_player
+            state: playing
+        sequence:
+          - service: media_player.select_source
+            data:
+              source: "{{ media_player }}"
+            entity_id: !input yt_music_player
+    default:
+      - service: media_player.select_source
+        data:
+          source: "{{ media_player }}"
+          entity_id: !input yt_music_player
+      - if:
+        - condition: template
+          value_template: '{{ ''enable_shuffle''
+                    in shuffle }}'
+        then:
+        - service: media_player.shuffle_set
+          data:
+            shuffle: true
+          target:
+            entity_id: !input yt_music_player
+        else:
+        - service: media_player.shuffle_set
+          data:
+            shuffle: false
+          target:
+            entity_id: !input yt_music_player
+      - service: media_player.play_media
+        data:
+          media_content_id: "{{ playlist }}"
+          media_content_type: playlist
+        target:
+          entity_id: !input yt_music_player
+mode: queued
