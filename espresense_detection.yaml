@@ -1,5 +1,5 @@
 blueprint:
-  name: "ESPresense: Status Update"
+  name: "ESPresense: Tolerance Update"
   description: "**Version: 1.0**\n\nESPresense Detection Blueprint"
   author: fixtse
   domain: automation

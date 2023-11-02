@@ -1,6 +1,6 @@
 blueprint:
   name: "Room Music Follow - YT Music"
-  description: "**Version: 1.0**\n\nMake YT Music Follow Your Around Your Home"
+  description: "**Version: 1.0**\n\nMake YT Music Follow You Around Your Home"
   author: fixtse
   domain: script
   input:
