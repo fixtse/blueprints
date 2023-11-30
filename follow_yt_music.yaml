@@ -1,6 +1,6 @@
 blueprint:
   name: "Room Music Follow - YT Music"
-  description: "**Version: 1.0**\n\nMake YT Music Follow You Around Your Home"
+  description: "**Version: 1.1**\n\nMake YT Music Follow You Around Your Home"
   author: fixtse
   domain: script
   input:
@@ -16,6 +16,11 @@ blueprint:
       selector:
         entity:
           domain: media_player
+    media_play:
+      name: Media to Play
+      description: Select Any song or playlist to be played if nothing is currently playing 
+      selector:
+        media:  
     shuffle:
       name: Shuffle
       default: disable_shuffle
@@ -29,15 +34,9 @@ blueprint:
           multiple: false
           custom_value: false
           sort: false
-    playlist:
-      name: PlayList
-      description: The ID of the playlist to play
-      selector:
-        text: null
   source_url: https://github.com/fixtse/blueprints/blob/main/follow_yt_music.yaml
 variables:
-  media_player: !input media_player
-  playlist: !input playlist
+  media_player:  !input media_player
   shuffle: !input shuffle
 sequence:
   - choose:
@@ -72,9 +71,5 @@ sequence:
           target:
             entity_id: !input yt_music_player
       - service: media_player.play_media
-        data:
-          media_content_id: "{{ playlist }}"
-          media_content_type: playlist
-        target:
-          entity_id: !input yt_music_player
+        data: !input media_play
 mode: queued
