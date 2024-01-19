@@ -9,6 +9,8 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:latest
+    ports:
+      - 11434:11434
     deploy:
       resources:
         reservations:
