@@ -1,3 +1,4 @@
+Start-Transcript -Path "C:\WSLPorts\WSLPorts.log" -Append
 $ports = @(11434, 3000);
 
 $wslAddress = bash.exe -c "ip a | grep eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}'"
