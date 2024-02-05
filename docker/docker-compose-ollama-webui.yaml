@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+
+  ollama-webui:
+    image: ghcr.io/ollama-webui/ollama-webui:main
+    container_name: ollama-webui
+    volumes:
+      - $HOME/ollama/ollama-webui:/app/backend/data
+    ports:
+      - 3000:8080
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+ 
+    
