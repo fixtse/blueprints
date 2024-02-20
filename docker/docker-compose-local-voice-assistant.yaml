@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  piper:
+    image: rhasspy/wyoming-piper
+    container_name: wyoming-piper
+    ports:
+      - 10200:10200
+    volumes:
+      - $HOME/wyoming/piper/data:/data
+    command: --voice en_US-ryan-high
+    restart: unless-stopped
+
+  whisper:
+    image: rhasspy/wyoming-whisper
+    container_name: wyoming-whisper
+    ports:
+      - 10300:10300
+    volumes:
+      - $HOME/wyoming/whisper/data:/data
+    command: --model tiny-int8 --language en
+    restart: unless-stopped
+
+  openwakeword:
+    image: rhasspy/wyoming-openwakeword
+    container_name: wyoming-openwakeword
+    ports:
+      - 10400:10400
+    volumes:
+      - $HOME/wyoming/openwakeword/data:/custom
+    command: --custom-model-dir /custom --preload-model 'ok_nabu'
+    restart: unless-stopped
