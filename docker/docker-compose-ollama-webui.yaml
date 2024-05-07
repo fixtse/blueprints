@@ -3,8 +3,8 @@ version: '3.8'
 services:
 
   ollama-webui:
-    image: ghcr.io/ollama-webui/ollama-webui:main
-    container_name: ollama-webui
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
     volumes:
       - $HOME/ollama/ollama-webui:/app/backend/data
     ports:
