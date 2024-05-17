@@ -1,13 +1,13 @@
 blueprint:
   name: Multi Calendar Conversation agent agenda notification
   source_url: https://github.com/fixtse/blueprints/blob/main/multiple_notify_agent_calendar_agenda.yaml
-  description:  
-    "# Multi Calendar Conversation Agent Agenda Notification\n **Version: 2.1**\n\n
+  description:
+    "# Multi Calendar Conversation Agent Agenda Notification\n **Version: 2.0**\n\n
     Conversation agent generates a notification based on the upcoming calendars, agendas, location, and weather.\n\n
     You can choose up to 3 calendars and 3 notify services to better fit your needs:\n\n
     - Don't forget to check the *Conversation agent prompt* and the end and update it if needed.\n\n
     - Adjust the maximum tokens to return in the OpenAI integration, if not sure what I'm talking about,\n Check up the **How to make it better** section of my video: [Click here](https://www.youtube.com/watch?v=rIFkGibePIw&t=283s) \n\n
-    Need help? or Just want to say hi \U0001F642? \n 
+    Need help? or Just want to say hi \U0001F642? \n
     Let me know what you think about this blueprint in the comments: [Click Here](https://fixtse.com/blog/openia-conversation-integration)\n\n"
   author: fixtse
   domain: automation
@@ -20,19 +20,19 @@ blueprint:
       default: 07:00:00
     calendar_number:
       name: How many calendars do you want to use?
-      description: Select the number 
+      description: Select the number
       default: one
       selector:
         select:
           options:
-          - label: '1'
-            value: one
-          - label: '2'
-            value: two
-          - label: '3'
-            value: three
+            - label: "1"
+              value: one
+            - label: "2"
+              value: two
+            - label: "3"
+              value: three
           multiple: false
-          custom_value: false    
+          custom_value: false
     calendar_entity_1:
       name: First Calendar
       description: The first calendar entity to use for finding upcoming calendar events.
@@ -92,17 +92,17 @@ blueprint:
                 - zone
     notify_number:
       name: How many notify services do you want to use?
-      description: Select the number 
+      description: Select the number
       default: one
       selector:
         select:
           options:
-          - label: '1'
-            value: one
-          - label: '2'
-            value: two
-          - label: '3'
-            value: three
+            - label: "1"
+              value: one
+            - label: "2"
+              value: two
+            - label: "3"
+              value: three
           multiple: false
           custom_value: false
     notify_service_1:
@@ -153,7 +153,6 @@ blueprint:
           - Making note of unusual weather for the location and time of year (but not mundane details like "0% chance of precipitation")
           - How much time remaining until their first meeting
           - Anything that may be special or unique, such as celebrating a birthday
-    
 
 trigger:
   platform: time
@@ -171,7 +170,7 @@ action:
       calendar_duration: !input calendar_duration
       prompt: !input prompt
   - alias: Fetch First Calendar Agenda
-    service: calendar.list_events
+    service: calendar.get_events
     data:
       duration: !input calendar_duration
     target:
@@ -179,10 +178,10 @@ action:
     response_variable: agenda_1
   - if:
       - condition: template
-        value_template: '{{ (calendar_number == ''two'') or (calendar_number == ''three'') }}'
+        value_template: "{{ (calendar_number == 'two') or (calendar_number == 'three') }}"
     then:
       - alias: Fetch Second Calendar Agenda
-        service: calendar.list_events
+        service: calendar.get_events
         data:
           duration: !input calendar_duration
         target:
@@ -190,37 +189,48 @@ action:
         response_variable: agenda_2
   - if:
       - condition: template
-        value_template: '{{ calendar_number == ''three''}}'
+        value_template: "{{ calendar_number == 'three'}}"
     then:
       - alias: Fetch Third Calendar Agenda
-        service: calendar.list_events
+        service: calendar.get_events
         data:
           duration: !input calendar_duration
         target:
           entity_id: !input calendar_entity_3
-        response_variable: agenda_3  
+        response_variable: agenda_3
+  - alias: Fetch Weather Forecast
+    service: weather.get_forecasts
+    data:
+      type: hourly
+    target:
+      entity_id:
+        - "{{ weather_entity }}"
+    response_variable: daily_forecast
+  - variables:
+      forecast_entity: "{{ daily_forecast[weather_entity] }}"
+      forecast: "{{ forecast_entity.forecast[0] }}"
   - alias: "Conversation Agent Notification Text"
     service: conversation.process
     data:
       text: |-
-        Time: {{ now() }}
+        Time: {{ now().strftime("%A %B %d %H:%M %p") }}
         {%- if zone_entity is defined %}
         Latitude: {{ state_attr(zone_entity, 'latitude') | round(1) }}
         Longitude: {{ state_attr(zone_entity, 'longitude') | round(1) }}
         {% endif %}
-        
-        {%- if weather_entity is defined %}
-        {%- set forecast = state_attr(weather_entity, 'forecast')[0] %}
+
+        {%- if weather_entity is defined %}        
         {%- set temperature_unit = state_attr(weather_entity, 'temperature_unit') -%}
-        Weather: {{ forecast.condition }} ({{ forecast.temperature }}{{ temperature_unit }}, {{ forecast.precipitation }}% precipitation)
+        Forecast: {{ forecast.condition }} ({{ forecast.temperature }}{{ temperature_unit }}, {{ forecast.precipitation }}% precipitation)
         {%- endif %}
-        
-        
+
+
         Calendar "{{ state_attr(calendar_entity_1, 'friendly_name') }}" events for the next {{ calendar_duration.hours }} hours:
+        {%- set agenda = (agenda_1 | items | first)[1] %}
         {%- if agenda_1.events %}
           {%- for event in agenda_1.events %}
           - Summary: {{ event.summary }}
-            Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
+            Start-End: {% if event.start is defined %}{{ event.start }} to {{ event.end }}{% else %}All Day{% endif %}
             {%- if event.description is defined %}
             Description: {{ event.description }}
             {% endif -%}
@@ -231,13 +241,14 @@ action:
         {%- else %}
           - No upcoming events.
         {%- endif %}
-       
+
         {%- if (calendar_number == "two") or (calendar_number == "three") %}
         Calendar "{{ state_attr(calendar_entity_2, 'friendly_name') }}" events for the next {{ calendar_duration.hours }} hours:
-          {%- if agenda_2.events %}
-            {%- for event in agenda_2.events %}
+          {%- set agenda = (agenda_2 | items | first)[1] %}
+          {%- if agenda.events %}
+            {%- for event in agenda.events %}
             - Summary: {{ event.summary }}
-              Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
+              Start-End: {% if event.start is defined %}{{ event.start }} to {{ event.end }}{% else %}All Day{% endif %}
               {%- if event.description is defined %}
               Description: {{ event.description }}
               {% endif -%}
@@ -252,10 +263,11 @@ action:
 
         {%- if (calendar_number == "three") %}
         Calendar "{{ state_attr(calendar_entity_3, 'friendly_name') }}" events for the next {{ calendar_duration.hours }} hours:
-          {%- if agenda_3.events %}
-            {%- for event in agenda_3.events %}
+          {%- set agenda = (agenda_3 | items | first)[1] %}
+          {%- if agenda.events %}
+            {%- for event in agenda.events %}
             - Summary: {{ event.summary }}
-              Start-End: {% if event.start is defined %}{{ as_timestamp(event.start) | timestamp_custom("%c") }} to {{ as_timestamp(event.end) | timestamp_custom("%c") }}{% else %}All Day{% endif %}
+              Start-End: {% if event.start is defined %}{{ event.start }} to {{ event.end }}{% else %}All Day{% endif %}
               {%- if event.description is defined %}
               Description: {{ event.description }}
               {% endif -%}
@@ -278,7 +290,7 @@ action:
       message: "{{ agent.response.speech.plain.speech }}"
   - if:
       - condition: template
-        value_template: '{{ (notify_number == ''two'') or (notify_number == ''three'') }}'
+        value_template: "{{ (notify_number == 'two') or (notify_number == 'three') }}"
     then:
       - alias: "Send notification"
         service: !input notify_service_2
@@ -287,11 +299,10 @@ action:
           message: "{{ agent.response.speech.plain.speech }}"
   - if:
       - condition: template
-        value_template: '{{ notify_number == ''three''}}'
+        value_template: "{{ notify_number == 'three'}}"
     then:
       - alias: "Send notification"
         service: !input notify_service_3
         data:
           title: "{{ now().strftime('%A') }} Agenda"
           message: "{{ agent.response.speech.plain.speech }}"
-  
