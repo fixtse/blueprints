@@ -9,9 +9,16 @@ services:
     image: ollama/ollama:latest
     ports:
       - 11434:11434
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   ollama-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:cuda
     container_name: open-webui
     volumes:
       - $HOME/ollama/ollama-webui:/app/backend/data
@@ -24,5 +31,10 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
- 
-    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
