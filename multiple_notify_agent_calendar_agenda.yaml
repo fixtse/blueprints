@@ -2,7 +2,7 @@ blueprint:
   name: Multi Calendar Conversation agent agenda notification
   source_url: https://github.com/fixtse/blueprints/blob/main/multiple_notify_agent_calendar_agenda.yaml
   description:
-    "# Multi Calendar Conversation Agent Agenda Notification\n **Version: 2.1**\n\n
+    "# Multi Calendar Conversation Agent Agenda Notification\n **Version: 2.1.1**\n\n
     Conversation agent generates a notification based on the upcoming calendars, agendas, location, and weather.\n\n
     You can choose up to 3 calendars and 3 notify services to better fit your needs:\n\n
     - Don't forget to check the *Conversation agent prompt* and the end and update it if needed.\n\n
@@ -227,8 +227,8 @@ action:
 
         Calendar "{{ state_attr(calendar_entity_1, 'friendly_name') }}" events for the next {{ calendar_duration.hours }} hours:
         {%- set agenda = (agenda_1 | items | first)[1] %}
-        {%- if agenda_1.events %}
-          {%- for event in agenda_1.events %}
+        {%- if agenda.events %}
+          {%- for event in agenda.events %}
           - Summary: {{ event.summary }}
             Start-End: {% if event.start is defined %}{{ event.start }} to {{ event.end }}{% else %}All Day{% endif %}
             {%- if event.description is defined %}
