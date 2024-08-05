@@ -1,0 +1,82 @@
+blueprint:
+  name: 'Bluetooth LE Sensor: Tolerance Update'
+  description: '**Version: 2.0**
+
+    Get better control over your Bluetooth LE sensors by adding a tolerance time to the
+    sensor. 
+    This blueprint will update the input select to the new state (room) if the
+    sensor has been in the same room for the tolerance times.'
+  author: fixtse
+  domain: automation
+  input:
+    person_ble_tracker:
+      name: BLE Tracker
+      description: The BLE tracker for the person
+      selector:
+        entity:
+          filter:
+          - domain:
+            - sensor
+          multiple: false
+    person_input_select:
+      name: Input select
+      description: This is the input select that tracks the person's status
+      selector:
+        entity:
+          filter:
+          - domain:
+            - input_select
+          multiple: false
+    tolerance_time:
+      name: Tolerance Time
+      description: How long to wait before consider someone in a diferent room
+      default: 2
+      selector:
+        number:
+          min: 0.0
+          max: 10.0
+          unit_of_measurement: minutes
+          step: 1.0
+          mode: slider
+  source_url: https://github.com/fixtse/blueprints/blob/main/bluetooth_presense_detection.yaml
+variables:
+  tolerance_time: !input tolerance_time
+trigger:
+- platform: state
+  entity_id: !input person_ble_tracker
+  id: ble_tracker
+condition: []
+action:
+- choose:
+  - conditions:
+    - condition: or
+      conditions:
+      - condition: state
+        entity_id: !input person_input_select
+        state: Away
+      - condition: template
+        value_template: '{{ ((as_timestamp(now()) - as_timestamp(trigger.to_state.last_changed))
+          / 60) | round(0) >= tolerance_time }}'
+        enabled: true
+    sequence:
+    - service: input_select.select_option
+      target:
+        entity_id: !input person_input_select
+      data:
+        option: '{{ trigger.to_state.state | replace("_", " ") | title }}'
+  - conditions:
+    - condition: or
+      conditions:
+      - condition: state
+        entity_id: !input person_ble_tracker
+        state: unknown
+      - condition: state
+        entity_id: !input person_ble_tracker
+        state: not_home
+    sequence:
+    - service: input_select.select_option
+      target:
+        entity_id: !input person_input_select
+      data:
+        option: Away
+mode: queued
