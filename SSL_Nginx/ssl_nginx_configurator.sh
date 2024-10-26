@@ -48,6 +48,7 @@ http {
 		tcp_nodelay on;
 		keepalive_timeout 65;
 		types_hash_max_size 2048;
+    server_tokens off;
 		
 		
 		default_type  application/octet-stream;
@@ -148,7 +149,7 @@ if [ "$1" == "setup" ]; then
     
   adguard_home:
     container_name: Adguard-Home
-    image: adguard-home
+    image: fixtse/adguard-home-wolfi:latest
     ports:
       - "3000:80"
       - "53:53/tcp"
@@ -177,7 +178,8 @@ if [ "$1" == "setup" ]; then
   fi
 
   echo "$FILE_CONTENT" > docker-compose.yml
-  echo "docker-compose.yml has been created based on your choice."
+  echo "docker-compose.yml created. Now run the script again to create your first custom domain"
+  echo "$0 <domain> <ip:port>"
   exit 0
 fi
 
@@ -234,8 +236,6 @@ touch ${NGINX_LOGS_DIR}/${DOMAIN}.access
 chmod 644 "$CERT_FILE" "$KEY_FILE" 
 chmod 666 "${NGINX_LOGS_DIR}/${DOMAIN}.access" "${NGINX_LOGS_DIR}/${DOMAIN}.error"
 
-
-
 # Get the expiration date of the new certificate
 NEW_EXPIRATION_DATE=$(get_expiration_date "$CERT_FILE")
 
@@ -263,6 +263,12 @@ server {
   ssl_certificate     /etc/nginx/certs/${DOMAIN}.crt;
   ssl_certificate_key /etc/nginx/certs/${DOMAIN}.key;
 
+  client_max_body_size 4G;
+  ssl_ciphers ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-CCM:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-CCM:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256;
+  ssl_session_cache  builtin:1000  shared:SSL:10m;
+  ssl_prefer_server_ciphers on;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubdomains";
+  
   access_log /home/nginx/logs/${DOMAIN}.access;
   error_log /home/nginx/logs/${DOMAIN}.error;
 
@@ -287,14 +293,18 @@ echo "Nginx configuration file has been created for ${DOMAIN} at ${NGINX_CONF_FI
 # Check if the Docker container SSL-NGINX is running
 if docker compose ps | grep -q 'SSL-NGINX'; then
   echo "Restarting the SSL-NGINX container..."
-  docker compose restart
-  echo "You can use this link to go to your application: https://${DOMAIN}"
+  docker compose restart nginx
+  echo "You can use this link to go to your application: https://${DOMAIN} after you set the DNS Rewrite in Adguard Home"
 else
   read -p "The SSL-NGINX container is not running. Do you want to start it? (y/n): " START_CONTAINER
   if [ "$START_CONTAINER" == "y" ]; then
     docker compose up -d
-	echo "You can use this link to go to your application: https://${DOMAIN}"
+	echo "You can use this link to go to your application: https://${DOMAIN} after you set the DNS Rewrite in Adguard Home"
   else
     echo "No worries! You can start the SSL-NGINX container later with the command: docker compose up -d"
   fi
+fi
+
+if docker compose ps | grep -q 'Adguard-Home'; then
+  echo "You can access AdGuard Home at http://localhost:3000"
 fi
