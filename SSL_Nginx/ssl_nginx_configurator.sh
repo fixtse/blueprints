@@ -2,24 +2,26 @@
 
 # Function to display help message
 show_help() {
-  echo "Usage: $0 <domain> <ip:port> | setup"
-  echo
-  echo "This script generates an SSL certificate and key for the specified domain and also creates the Nginx reverse-proxy configuration file."
-  echo "It also has a setup option to create a default nginx.conf and docker-compose.yml."
-  echo
-  echo "Arguments:"
-  echo "  <domain>    The domain name for which to generate the SSL certificate and key."
-  echo "  <ip:port>   The IP address and port to be used in the Nginx configuration."
-  echo "  setup       Run the setup to create nginx.conf and docker-compose.yml."
-  echo
-  echo "If a domain (e.g., example.com) is provided, a wildcard certificate will be generated,"
-  echo "which can be used for any subdomain (e.g., *.example.com)."
-  echo "If a subdomain (e.g., sub.example.com) is provided, only that specific subdomain will be included."
-  echo
-  echo "Example:"
-  echo "  $0 example.com 192.168.1.1:8080"
-  echo "  $0 sub.example.com 192.168.1.1:8080"
-  echo "  $0 setup"
+echo
+echo "Usage: ./ssl_nginx_configurator.sh <domain> <ip:port> | setup"
+echo
+echo "This script has two main functions:"
+echo "1. Setup: This will take care of the configuration of NGINX and/or Adguard Home."
+echo "2. Generate Self Signed SSL and Configure Nginx: Generates a Self Signed SSL certificate and key for the specified domain and creates the Nginx reverse-proxy configuration file, and automatically restarts the service"
+echo
+echo "Arguments:"
+echo "- <domain>: The domain name for which to generate the SSL certificate and key."
+echo "- <ip:port>: The IP address and port to be used in the Nginx configuration."
+echo "- setup: Run the setup to create nginx.conf and docker-compose.yml."
+echo 
+echo "Details:"
+echo "- If a domain (e.g., example.com) is provided, a wildcard certificate will be generated, which can be used for any subdomain (e.g., *.example.com)."
+echo "- If a subdomain (e.g., sub.example.com) is provided, only that specific subdomain will be included."
+echo 
+echo "Example:"
+echo "  $0 example.com 192.168.1.1:8080"
+echo "  $0 sub.example.com 192.168.1.1:8080"
+echo "  $0 setup"
 }
 
 # Function to get the expiration date of an existing certificate
@@ -102,6 +104,9 @@ http {
 EOL
 }
 
+# Get the directory of the script
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+
 # Check if openssl is installed
 if ! command -v openssl &> /dev/null; then
   echo "openssl is not installed. Attempting to install it..."
@@ -113,8 +118,8 @@ if ! command -v openssl &> /dev/null; then
 fi
 
 # Check if setup option is provided
-if [ "$1" == "setup" ]; then
-  if [ -f "nginx/nginx.conf" ]; then
+if [ "$1" == "setup" ]; then  
+  if [ -f "${SCRIPT_DIR}/nginx/nginx.conf" ]; then
     read -p "nginx.conf already exists. Do you want to overwrite it? (y/n): " OVERWRITE_NGINX
     if [ "$OVERWRITE_NGINX" == "y" ]; then
       create_nginx_conf
@@ -127,10 +132,16 @@ if [ "$1" == "setup" ]; then
     echo "nginx.conf has been created."
   fi
 
-  echo "Choose your setup option:"
-  echo "1) AdGuard Home + Nginx"
-  echo "2) Just Nginx"
-  read -p "Enter your choice (1 or 2): " SETUP_CHOICE
+  if [ -z "$(ls /proc/sys/fs/binfmt_misc/WSLInterop* 2>/dev/null)" ]; then
+    echo "Choose your setup option:"
+    echo "1) AdGuard Home + Nginx"
+    echo "2) Just Nginx"
+    read -p "Enter your choice (1 or 2): " SETUP_CHOICE
+    WSL_CHECK="false"
+  else
+    SETUP_CHOICE="2"
+    WSL_CHECK="true"
+  fi
 
   if [ "$SETUP_CHOICE" == "1" ]; then
     FILE_CONTENT='services:
@@ -141,10 +152,10 @@ if [ "$1" == "setup" ]; then
       - "443:8558"
       - "80:8557"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/certs:/etc/nginx/certs
-      - ./nginx/logs:/home/nginx/logs
+      - '"${SCRIPT_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf"'
+      - '"${SCRIPT_DIR}/nginx/conf.d:/etc/nginx/conf.d"'
+      - '"${SCRIPT_DIR}/nginx/certs:/etc/nginx/certs"'
+      - '"${SCRIPT_DIR}/nginx/logs:/home/nginx/logs"'
     restart: always
     
   adguard_home:
@@ -155,8 +166,8 @@ if [ "$1" == "setup" ]; then
       - "53:53/tcp"
       - "53:53/udp"
     volumes:
-      - ./adguard/conf:/opt/AdGuardHome/conf
-      - ./adguard/work:/opt/AdGuardHome/work
+      - '"${SCRIPT_DIR}/adguard/conf:/opt/AdGuardHome/conf"'
+      - '"${SCRIPT_DIR}/adguard/work:/opt/AdGuardHome/work"'
     restart: always'
   elif [ "$SETUP_CHOICE" == "2" ]; then
     FILE_CONTENT='services:
@@ -167,19 +178,45 @@ if [ "$1" == "setup" ]; then
       - "443:8558"
       - "80:8557"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/certs:/etc/nginx/certs
-      - ./nginx/logs:/home/nginx/logs
+      - '"${SCRIPT_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf"'
+      - '"${SCRIPT_DIR}/nginx/conf.d:/etc/nginx/conf.d"'
+      - '"${SCRIPT_DIR}/nginx/certs:/etc/nginx/certs"'
+      - '"${SCRIPT_DIR}/nginx/logs:/home/nginx/logs"'
     restart: always'
   else
     echo "Invalid choice. Exiting setup."
     exit 1
   fi
 
-  echo "$FILE_CONTENT" > docker-compose.yml
-  echo "docker-compose.yml created. Now run the script again to create your first custom domain"
+  echo "$FILE_CONTENT" > ${SCRIPT_DIR}/docker-compose.yml
+  docker compose -f ${SCRIPT_DIR}/docker-compose.yml pull
+  if [ "$SETUP_CHOICE" == "1" ]; then
+    echo "To check if the port 53 is in use by Systemd, you need to enter your password. This is required for AdGuard Home to function properly."
+    read -s -p "Password: " ROOT_PASSWORD
+    #Verify is port 53 is in use by Systemd and apply fix
+    if [ -z "$(echo "$ROOT_PASSWORD" | sudo lsof -i :53 | grep systemd 2>/dev/null)" ]; then     
+      echo "Disabling Systemd Resolve"    
+      echo "$ROOT_PASSWORD" | sudo -S mkdir -p /etc/systemd/resolved.conf.d
+      echo "$ROOT_PASSWORD" | sudo -S echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
+      echo "$ROOT_PASSWORD" | sudo -S mv /etc/resolv.conf /etc/resolv.conf.backup
+      echo "$ROOT_PASSWORD" | sudo -S ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
+      echo "$ROOT_PASSWORD" | sudo -S systemctl reload-or-restart systemd-resolved
+    fi
+  fi
+
+  docker compose -f ${SCRIPT_DIR}/docker-compose.yml up -d
+  if [ "$SETUP_CHOICE" == "1" ]; then
+    echo "Opening AdGuard Home in your default browser..."
+    xdg-open http://localhost:3000 &
+  fi  
+	  
+  echo "Now run the script again to create your first custom domain"
   echo "$0 <domain> <ip:port>"
+  
+  if [ "$WSL_CHECK" == "true" ]; then
+  echo "To install AdGuard Home on Windows, please execute the following command in an Administrator PowerShell Window:"
+  echo "Invoke-WebRequest -Uri \"https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_windows_amd64.zip\" -OutFile \"C:\\AdGuardHome.zip\"; Expand-Archive -Path \"C:\\AdGuardHome.zip\" -DestinationPath \"C:\\AdGuardHome\"; Start-Process -FilePath \"C:\\AdGuardHome\\AdGuardHome.exe\" -ArgumentList \"-s install\" -NoNewWindow -Wait; Remove-Item -Path \"C:\\AdGuardHome.zip\"; Start-Process \"http://localhost:3000/\""
+  fi
   exit 0
 fi
 
@@ -191,12 +228,12 @@ fi
 
 DOMAIN=$1
 IP=$2
-CERT_DIR="nginx/certs"
+CERT_DIR="${SCRIPT_DIR}/nginx/certs"
 CERT_FILE="${CERT_DIR}/${DOMAIN}.crt"
 KEY_FILE="${CERT_DIR}/${DOMAIN}.key"
-NGINX_CONF_DIR="nginx/conf.d"
+NGINX_CONF_DIR="${SCRIPT_DIR}/nginx/conf.d"
 NGINX_CONF_FILE="${NGINX_CONF_DIR}/${DOMAIN}.conf"
-NGINX_LOGS_DIR="nginx/logs"
+NGINX_LOGS_DIR="${SCRIPT_DIR}/nginx/logs"
 
 # Create the certs, conf.d and logs directories if they don't exist
 mkdir -p "$CERT_DIR"
@@ -293,18 +330,19 @@ echo "Nginx configuration file has been created for ${DOMAIN} at ${NGINX_CONF_FI
 # Check if the Docker container SSL-NGINX is running
 if docker compose ps | grep -q 'SSL-NGINX'; then
   echo "Restarting the SSL-NGINX container..."
-  docker compose restart nginx
+  docker compose -f ${SCRIPT_DIR}/docker-compose.yml restart nginx
   echo "You can use this link to go to your application: https://${DOMAIN} after you set the DNS Rewrite in Adguard Home"
 else
   read -p "The SSL-NGINX container is not running. Do you want to start it? (y/n): " START_CONTAINER
   if [ "$START_CONTAINER" == "y" ]; then
-    docker compose up -d
+    docker compose -f ${SCRIPT_DIR}/docker-compose.yml up -d
 	echo "You can use this link to go to your application: https://${DOMAIN} after you set the DNS Rewrite in Adguard Home"
   else
     echo "No worries! You can start the SSL-NGINX container later with the command: docker compose up -d"
   fi
 fi
 
-if docker compose ps | grep -q 'Adguard-Home'; then
+if docker compose -f ${SCRIPT_DIR}/docker-compose.yml ps | grep -q 'Adguard-Home'; then
   echo "You can access AdGuard Home at http://localhost:3000"
 fi
+
