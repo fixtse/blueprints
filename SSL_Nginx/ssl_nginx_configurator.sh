@@ -191,10 +191,9 @@ if [ "$1" == "setup" ]; then
   echo "$FILE_CONTENT" > ${SCRIPT_DIR}/docker-compose.yml
   docker compose -f ${SCRIPT_DIR}/docker-compose.yml pull
   if [ "$SETUP_CHOICE" == "1" ]; then
-    echo "To check if the port 53 is in use by Systemd, you need to enter your password. This is required for AdGuard Home to function properly."
-    read -s -p "Password: " ROOT_PASSWORD
+    echo "To check if the port 53 is in use by Systemd, you need to enter your password. This is required for AdGuard Home to function properly."    
     #Verify is port 53 is in use by Systemd and apply fix
-    if [ -z "$(echo "$ROOT_PASSWORD" | sudo lsof -i :53 | grep systemd 2>/dev/null)" ]; then     
+    if [ -z "$(sudo lsof -i :53 | grep systemd 2>/dev/null)" ]; then     
       echo "Disabling Systemd Resolve"    
       echo "$ROOT_PASSWORD" | sudo -S mkdir -p /etc/systemd/resolved.conf.d
       echo "$ROOT_PASSWORD" | sudo -S echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
