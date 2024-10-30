@@ -29,10 +29,13 @@ get_expiration_date() {
   openssl x509 -enddate -noout -in "$1" | cut -d= -f2 | xargs -I {} date -d {} +"%Y-%m-%d %H:%M:%S"
 }
 
+# Get the directory of the script
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+
 # Function to create nginx.conf
 create_nginx_conf() {
-mkdir -p nginx
-  cat <<EOL > nginx/nginx.conf
+mkdir -p "${SCRIPT_DIR}/nginx"
+  cat <<EOL > "${SCRIPT_DIR}/nginx/nginx.conf"
 worker_processes  auto;
 pid		/var/run/nginx.pid;
 
@@ -103,9 +106,6 @@ http {
 }
 EOL
 }
-
-# Get the directory of the script
-SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
 # Check if openssl is installed
 if ! command -v openssl &> /dev/null; then
@@ -213,7 +213,9 @@ if [ "$1" == "setup" ]; then
   echo "$0 <domain> <ip:port>"
   
   if [ "$WSL_CHECK" == "true" ]; then
+  echo
   echo "To install AdGuard Home on Windows, please execute the following command in an Administrator PowerShell Window:"
+  echo
   echo "Invoke-WebRequest -Uri \"https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_windows_amd64.zip\" -OutFile \"C:\\AdGuardHome.zip\"; Expand-Archive -Path \"C:\\AdGuardHome.zip\" -DestinationPath \"C:\\AdGuardHome\"; Start-Process -FilePath \"C:\\AdGuardHome\\AdGuardHome.exe\" -ArgumentList \"-s install\" -NoNewWindow -Wait; Remove-Item -Path \"C:\\AdGuardHome.zip\"; Start-Process \"http://localhost:3000/\""
   fi
   exit 0
