@@ -3,25 +3,28 @@
 # Function to display help message
 show_help() {
 echo
-echo "Usage: ./ssl_nginx_configurator.sh <domain> <ip:port> | setup"
+echo "Usage: $0 <domain> <ip:port> | setup"
 echo
 echo "This script has two main functions:"
 echo "1. Setup: This will take care of the configuration of NGINX and/or Adguard Home."
 echo "2. Generate Self Signed SSL and Configure Nginx: Generates a Self Signed SSL certificate and key for the specified domain and creates the Nginx reverse-proxy configuration file, and automatically restarts the service"
+echo "3. Update: This will update the Docker containers to the latest version."
 echo
 echo "Arguments:"
 echo "- <domain>: The domain name for which to generate the SSL certificate and key."
 echo "- <ip:port>: The IP address and port to be used in the Nginx configuration."
 echo "- setup: Run the setup to create nginx.conf and docker-compose.yml."
+echo "- update: Update the Docker containers to the latest version."
 echo 
 echo "Details:"
 echo "- If a domain (e.g., example.com) is provided, a wildcard certificate will be generated, which can be used for any subdomain (e.g., *.example.com)."
 echo "- If a subdomain (e.g., sub.example.com) is provided, only that specific subdomain will be included."
 echo 
 echo "Example:"
+echo "  $0 setup"
 echo "  $0 example.com 192.168.1.1:8080"
 echo "  $0 sub.example.com 192.168.1.1:8080"
-echo "  $0 setup"
+echo "  $0 update"
 }
 
 # Function to get the expiration date of an existing certificate
@@ -201,6 +204,7 @@ if [ "$1" == "setup" ]; then
       echo "$PASSWORD" | sudo -S mv /etc/resolv.conf /etc/resolv.conf.backup
       echo "$PASSWORD" | sudo -S ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
       echo "$PASSWORD" | sudo -S systemctl reload-or-restart systemd-resolved
+      echo "Done"
     fi
   fi
 
@@ -219,6 +223,14 @@ if [ "$1" == "setup" ]; then
   echo
   echo "Invoke-WebRequest -Uri \"https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_windows_amd64.zip\" -OutFile \"C:\\AdGuardHome.zip\"; Expand-Archive -Path \"C:\\AdGuardHome.zip\" -DestinationPath \"C:\\AdGuardHome\"; Start-Process -FilePath \"C:\\AdGuardHome\\AdGuardHome.exe\" -ArgumentList \"-s install\" -NoNewWindow -Wait; Remove-Item -Path \"C:\\AdGuardHome.zip\"; Start-Process \"http://localhost:3000/\""
   fi
+  exit 0
+elif [ "$1" == "update" ]; then
+  echo "Updating the Docker containers..."
+  docker compose -f ${SCRIPT_DIR}/docker-compose.yml pull
+  docker compose -f ${SCRIPT_DIR}/docker-compose.yml up -d
+  echo "Service Update Complete, restarting the containers to apply new configuration"
+  docker compose -f ${SCRIPT_DIR}/docker-compose.yml restart
+  echo "Done"
   exit 0
 fi
 
@@ -347,4 +359,3 @@ fi
 if docker compose -f ${SCRIPT_DIR}/docker-compose.yml ps | grep -q 'Adguard-Home'; then
   echo "You can access AdGuard Home at http://localhost:3000"
 fi
-
