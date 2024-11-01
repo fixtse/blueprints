@@ -161,7 +161,7 @@ if [ "$1" == "setup" ]; then
     image: chainguard/nginx:latest
     ports:
       - "443:8558"
-      - "81:8557"
+      - "80:8557"
     volumes:
       - '"${SCRIPT_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf"'
       - '"${SCRIPT_DIR}/nginx/conf.d:/etc/nginx/conf.d"'
@@ -173,7 +173,7 @@ if [ "$1" == "setup" ]; then
     container_name: Adguard-Home
     image: fixtse/adguard-home-wolfi:latest
     ports:
-      - "80:80"
+      - "82:80"
       - "3000:3000"
       - "53:53/tcp"
       - "53:53/udp"
@@ -357,5 +357,5 @@ else
 fi
 
 if docker compose -f ${SCRIPT_DIR}/docker-compose.yml ps | grep -q 'Adguard-Home'; then
-  echo "You can access AdGuard Home at http://localhost"
+  echo "You can access AdGuard Home at http://localhost:82"
 fi
