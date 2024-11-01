@@ -34,6 +34,14 @@ get_expiration_date() {
 
 # Get the directory of the script
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+CERT_DIR="${SCRIPT_DIR}/nginx/certs"
+NGINX_CONF_DIR="${SCRIPT_DIR}/nginx/conf.d"
+NGINX_LOGS_DIR="${SCRIPT_DIR}/nginx/logs"
+
+# Create the certs, conf.d and logs directories if they don't exist
+mkdir -p "$CERT_DIR"
+mkdir -p "$NGINX_CONF_DIR"
+mkdir -p "$NGINX_LOGS_DIR"
 
 # Function to create nginx.conf
 create_nginx_conf() {
@@ -153,7 +161,7 @@ if [ "$1" == "setup" ]; then
     image: chainguard/nginx:latest
     ports:
       - "443:8558"
-      - "80:8557"
+      - "81:8557"
     volumes:
       - '"${SCRIPT_DIR}/nginx/nginx.conf:/etc/nginx/nginx.conf"'
       - '"${SCRIPT_DIR}/nginx/conf.d:/etc/nginx/conf.d"'
@@ -165,7 +173,8 @@ if [ "$1" == "setup" ]; then
     container_name: Adguard-Home
     image: fixtse/adguard-home-wolfi:latest
     ports:
-      - "3000:80"
+      - "80:80"
+      - "3000:3000"
       - "53:53/tcp"
       - "53:53/udp"
     volumes:
@@ -227,9 +236,8 @@ if [ "$1" == "setup" ]; then
 elif [ "$1" == "update" ]; then
   echo "Updating the Docker containers..."
   docker compose -f ${SCRIPT_DIR}/docker-compose.yml pull
-  docker compose -f ${SCRIPT_DIR}/docker-compose.yml up -d
   echo "Service Update Complete, restarting the containers to apply new configuration"
-  docker compose -f ${SCRIPT_DIR}/docker-compose.yml restart
+  docker compose -f ${SCRIPT_DIR}/docker-compose.yml up --force-recreate -d 
   echo "Done"
   exit 0
 fi
@@ -242,17 +250,9 @@ fi
 
 DOMAIN=$1
 IP=$2
-CERT_DIR="${SCRIPT_DIR}/nginx/certs"
 CERT_FILE="${CERT_DIR}/${DOMAIN}.crt"
 KEY_FILE="${CERT_DIR}/${DOMAIN}.key"
-NGINX_CONF_DIR="${SCRIPT_DIR}/nginx/conf.d"
 NGINX_CONF_FILE="${NGINX_CONF_DIR}/${DOMAIN}.conf"
-NGINX_LOGS_DIR="${SCRIPT_DIR}/nginx/logs"
-
-# Create the certs, conf.d and logs directories if they don't exist
-mkdir -p "$CERT_DIR"
-mkdir -p "$NGINX_CONF_DIR"
-mkdir -p "$NGINX_LOGS_DIR"
 
 # Check if the certificate file already exists
 if [ -f "$CERT_FILE" ]; then
@@ -342,7 +342,7 @@ EOL
 echo "Nginx configuration file has been created for ${DOMAIN} at ${NGINX_CONF_FILE}"
 
 # Check if the Docker container SSL-NGINX is running
-if docker compose ps | grep -q 'SSL-NGINX'; then
+if docker compose -f ${SCRIPT_DIR}/docker-compose.yml ps | grep -q 'SSL-NGINX'; then
   echo "Restarting the SSL-NGINX container..."
   docker compose -f ${SCRIPT_DIR}/docker-compose.yml restart nginx
   echo "You can use this link to go to your application: https://${DOMAIN} after you set the DNS Rewrite in Adguard Home"
@@ -357,5 +357,5 @@ else
 fi
 
 if docker compose -f ${SCRIPT_DIR}/docker-compose.yml ps | grep -q 'Adguard-Home'; then
-  echo "You can access AdGuard Home at http://localhost:3000"
+  echo "You can access AdGuard Home at http://localhost"
 fi
