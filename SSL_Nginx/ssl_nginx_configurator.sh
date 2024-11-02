@@ -230,7 +230,7 @@ if [ "$1" == "setup" ]; then
   echo
   echo "To install AdGuard Home on Windows, please execute the following command in an Administrator PowerShell Window:"
   echo
-  echo "Invoke-WebRequest -Uri \"https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_windows_amd64.zip\" -OutFile \"C:\\AdGuardHome.zip\"; Expand-Archive -Path \"C:\\AdGuardHome.zip\" -DestinationPath \"C:\\"; Start-Process -FilePath \"C:\\AdGuardHome\\AdGuardHome.exe\" -ArgumentList \"-s install\" -NoNewWindow -Wait; Remove-Item -Path \"C:\\AdGuardHome.zip\"; Start-Process \"http://localhost:3000/\""
+  echo "Invoke-WebRequest -Uri \"https://github.com/AdguardTeam/AdGuardHome/releases/latest/download/AdGuardHome_windows_amd64.zip\" -OutFile \"C:\\AdGuardHome.zip\"; Expand-Archive -Path \"C:\\AdGuardHome.zip\" -DestinationPath \"C:\\\"; Start-Process -FilePath \"C:\\AdGuardHome\\AdGuardHome.exe\" -ArgumentList \"-s install\" -NoNewWindow -Wait; Remove-Item -Path \"C:\\AdGuardHome.zip\"; Start-Process \"http://localhost:3000/\""
   fi
   exit 0
 elif [ "$1" == "update" ]; then
