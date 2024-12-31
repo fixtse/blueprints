@@ -1,6 +1,6 @@
 {
   "name": "ReSpeaker Satellite",
-  "version": "2024.12.9",
+  "version": "2024.12.2",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": false,
   "builds": [
