@@ -1,6 +1,6 @@
 blueprint:
-  name: "Room Music Follow - Spotify"
-  description: "**Version: 1.0**\n\n Make Spotify Follow You Around Your Home"
+  name: Room Music Follow - Spotify
+  description: "**Version: 1.1**\n\n Make Spotify Follow You Around Your Home \n\n Recent Changes:\n -Added support for multiple accounts"
   author: fixtse
   domain: script
   input:
@@ -9,66 +9,132 @@ blueprint:
       description: Spotify Media Player
       selector:
         entity:
-          domain: media_player
+          domain:
+            - media_player
+          multiple: false
     media_player:
       name: Media Player
       description: Media Player to Play the music
       selector:
         entity:
-          domain: media_player
+          domain:
+            - media_player
+          multiple: false
     shuffle:
       name: Shuffle
-      default: disable_shuffle
+      default: []
       selector:
         select:
           options:
-          - label: Enable
-            value: enable_shuffle
-          - label: Disable
-            value: disable_shuffle
-          multiple: false
+            - label: Enable
+              value: enable_shuffle
+          multiple: true
           custom_value: false
           sort: false
     uri:
       name: URI
       description: The URI of the playlist to play
       selector:
-        text: null
+        text: {}
+    not_default:
+      name: Multiple Account Support
+      icon: mdi:account-multiple-plus-outline
+      collapsed: false
+      input:
+        activate_feature_multi_account:
+          name: Use specific account
+          description: "Enable this to specify the account to use (as configured in [spotcat](https://github.com/fondberg/spotcast?tab=readme-ov-file#multiple-accounts)) \n Leave disabled to use default account "
+          default: []
+          selector:
+            select:
+              options:
+                - label: Use specific account
+                  value: use_specific_account
+              multiple: true
+              custom_value: false
+              sort: false
+        account_name:
+          name: Account Name
+          description: Use this if you added multiple accounts on spotcast integration
+          default: []
+          selector:
+            text: {}
   source_url: https://github.com/fixtse/blueprints/blob/main/follow_spotify.yaml
 variables:
   media_player: !input media_player
   uri: !input uri
   shuffle: !input shuffle
+  activate_feature_multi_account: !input activate_feature_multi_account
+  account_name: !input account_name
 sequence:
-  - choose:
-      - conditions:
-          - condition: state
-            entity_id: !input spotify_player
-            state: playing
-        sequence:
-          - service: spotcast.start
-            data:
-              entity_id: "{{ media_player }}"
-              force_playback: true
-    default:      
-      - if:
-        - condition: template
-          value_template: '{{ ''enable_shuffle''
-                    in shuffle }}'
-        then:
-        - service: spotcast.start
-          data:
-            entity_id: "{{ media_player }}"
-            shuffle: true
-            random_song: true
-            force_playback: true
-            uri: "{{ uri }}"
-        else:
-        - service: spotcast.start
-          data:
-            entity_id: "{{ media_player }}"
-            shuffle: false
-            random_song: true
-            force_playback: true
-            uri: "{{ uri }}"
+  - if:
+      - condition: template
+        value_template:
+          "{{ 'use_specific_account' in activate_feature_multi_account
+          }}"
+    then:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: !input spotify_player
+                state: playing
+            sequence:
+              - service: spotcast.start
+                data:
+                  entity_id: "{{ media_player }}"
+                  account: "{{ account_name }}"
+                  force_playback: true
+        default:
+          - if:
+              - condition: template
+                value_template: "{{ 'enable_shuffle' in shuffle }}"
+            then:
+              - service: spotcast.start
+                data:
+                  entity_id: "{{ media_player }}"
+                  shuffle: true
+                  random_song: true
+                  force_playback: true
+                  account: "{{ account_name }}"
+                  uri: "{{ uri }}"
+            else:
+              - service: spotcast.start
+                data:
+                  entity_id: "{{ media_player }}"
+                  shuffle: false
+                  random_song: true
+                  force_playback: true
+                  account: "{{ account_name }}"
+                  uri: "{{ uri }}"
+    else:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: !input spotify_player
+                state: playing
+            sequence:
+              - service: spotcast.start
+                data:
+                  entity_id: "{{ media_player }}"
+                  force_playback: true
+        default:
+          - if:
+              - condition: template
+                value_template: "{{ 'enable_shuffle' in shuffle }}"
+            then:
+              - service: spotcast.start
+                data:
+                  entity_id: "{{ media_player }}"
+                  shuffle: true
+                  random_song: true
+                  force_playback: true
+                  uri: "{{ uri }}"
+            else:
+              - service: spotcast.start
+                data:
+                  entity_id: "{{ media_player }}"
+                  shuffle: false
+                  random_song: true
+                  force_playback: true
+                  uri: "{{ uri }}"
 mode: queued
