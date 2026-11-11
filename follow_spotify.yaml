@@ -1,136 +1,336 @@
 blueprint:
   name: Room Music Follow - Spotify
-  description: "**Version: 2.0**\n\n Make Spotify Follow You Around Your Home \n\n Recent Changes:\n - Added support for Spotcast v6 alpha"
+  description: |
+    **Version: 4.1**
+
+    Start a playlist on the selected speaker, or move Spotify playback from another device.
+    If that speaker is already playing Spotify, switch to the configured playlist.
+    Keep the current song when the same playlist is detected.
+
+    Requires Spotcast v6 and the Spotify integration.
+
+    **Recent changes**
+    - 4.1: Avoid restarting the same playlist using the current-playlist sensor.
+    - 4.0: Added built-in retries, playback verification, and buffering recovery.
   author: fixtse
   domain: script
   input:
     spotify_player:
-      name: Spotify Player
-      description: Spotify Media Player
+      name: Spotify account player
+      description: Spotify account player used to identify the active device and current track. Select
+        the same account as Spotcast; this is not the destination speaker.
       selector:
         entity:
           domain:
-            - media_player
+          - media_player
           integration: spotify
           multiple: false
+          reorder: false
     media_player:
-      name: Media Player
-      description: Media Player to Play the music
+      name: Destination speaker
+      description: Cast or Spotcast media player where Spotify should play.
       selector:
         entity:
           domain:
-            - media_player
+          - media_player
           multiple: false
-    shuffle:
-      name: Shuffle
-      default: []
-      selector:
-        select:
-          options:
-            - label: Enable
-              value: enable_shuffle
-          multiple: true
-          custom_value: false
-          sort: false
-    repeat:
-      name: Repeat Mode
-      default: "context"
-      selector:
-        select:
-          options:
-            - label: Context (Default)
-              value: context
-            - label: Track
-              value: track
-            - label: "Off"
-              value: "off"
-          multiple: false
-          custom_value: false
-          sort: false
+          reorder: false
     uri:
-      name: URI
-      description: The URI of the playlist to play
+      name: Spotify playlist URI
+      description: Playlist to start when Spotify is idle or already playing on the destination speaker.
+        Playback coming from another device keeps its current playlist.
       selector:
-        text: {}
-    not_default:
-      name: Multiple Account Support
-      icon: mdi:account-multiple-plus-outline
-      collapsed: false
+        text:
+          multiline: false
+          multiple: false
+    playback_options:
+      name: Shuffle and repeat
+      icon: mdi:shuffle-variant
+      collapsed: true
       input:
-        activate_feature_multi_account:
-          name: Use specific account
-          description: "Leave disabled to use default account"
+        shuffle:
+          name: Shuffle
           default: []
           selector:
             select:
               options:
-                - label: Use specific account
-                  value: use_specific_account
+              - label: Enable
+                value: enable_shuffle
+              multiple: true
+              custom_value: false
+              sort: false
+          description: Enable to shuffle tracks when starting the configured URI. Transferring an existing
+            session preserves its playback settings.
+        repeat:
+          name: Repeat Mode
+          default: context
+          selector:
+            select:
+              options:
+              - label: Context (Default)
+                value: context
+              - label: Track
+                value: track
+              - label: 'Off'
+                value: 'off'
+              multiple: false
+              custom_value: false
+              sort: false
+          description: Repeat the playlist (Context), the current track (Track), or disable repeat (Off)
+            when starting the configured URI.
+    playback_and_retries:
+      name: Playback and retries
+      description: Choose whether repeated runs on the active speaker switch playlists, and configure
+        bounded playback recovery.
+      icon: mdi:play-circle-outline
+      collapsed: true
+      input:
+        start_configured_playlist:
+          name: Switch playlist on this speaker
+          description: 'On: if Spotify is already playing on this destination, start the configured playlist.
+            If playing elsewhere, transfer unchanged. Off: always transfer an existing session unchanged.
+            When Spotify is not playing, both modes start the configured URI.'
+          default: true
+          selector:
+            boolean: null
+        max_attempts:
+          name: Maximum attempts
+          default: 3
+          selector:
+            number:
+              min: 1
+              max: 10
+              mode: box
+          description: 'Maximum playback attempts, including the first request. Retries are bounded; the
+            script reports an error if playback cannot be confirmed. Default: 3.'
+        verification_timeout:
+          name: Playback confirmation timeout
+          default: 12
+          selector:
+            number:
+              min: 3
+              max: 60
+              unit_of_measurement: seconds
+              mode: box
+          description: 'Seconds to wait for verified Spotify playback after each successful request. Each
+            request also has a 2-second settling delay. Buffering can receive the additional grace period
+            below. Default: 12 seconds.'
+        buffering_timeout:
+          name: Additional buffering grace period
+          description: 'If the destination is still buffering after the normal confirmation timeout, allow
+            this many additional seconds before retrying. Applies to both playlist and transfer requests.
+            Never stops Cast. Default: 15 seconds.'
+          default: 15
+          selector:
+            number:
+              min: 5
+              max: 60
+              unit_of_measurement: seconds
+              mode: box
+        current_playlist_sensor:
+          name: Current playlist sensor (optional)
+          description: Select the Spotcast Spotify Current Playlist sensor for this account. Its context_uri
+            attribute identifies the active playlist exactly. Leave empty for automatic detection when
+            there is one matching account sensor. If no URI is available, playback cannot be safely skipped.
+          default: []
+          selector:
+            entity:
+              domain: sensor
+              integration: spotcast
+    not_default:
+      name: Multiple account support
+      icon: mdi:account-multiple-plus-outline
+      collapsed: true
+      input:
+        activate_feature_multi_account:
+          name: Use specific account
+          description: Enable only when using a specific Spotcast account. Otherwise the default Spotcast
+            account is used.
+          default: []
+          selector:
+            select:
+              options:
+              - label: Use specific account
+                value: use_specific_account
               multiple: true
               custom_value: false
               sort: false
         account_name:
-          name: Integration
-          description: Select the Account's Integration
+          name: Spotcast account
+          description: Select the Spotcast integration entry for the same account as the Spotify account
+            player. Required when Use specific account is enabled.
           default: []
           selector:
             config_entry:
               integration: spotcast
+      description: 'Optional: choose a specific Spotcast account instead of its default. Match it to the
+        Spotify account player selected above.'
+    before_playback:
+      name: Before playback
+      description: Optional actions to prepare the speaker, such as setting volume or disconnecting Bluetooth.
+        Runs after the same-playlist check and before playback requests.
+      icon: mdi:cog-play-outline
+      collapsed: true
+      input:
+        before_playback_actions:
+          name: Preparation actions
+          description: Leave empty unless this speaker needs preparation. Playback is cancelled if a preparation
+            action fails.
+          default: []
+          selector:
+            action: null
   source_url: https://github.com/fixtse/blueprints/blob/main/follow_spotify.yaml
 variables:
-  media_player: !input media_player
-  uri: !input uri
-  shuffle: !input shuffle
-  repeat: !input repeat
-  activate_feature_multi_account: !input activate_feature_multi_account
-  account_name: !input account_name
-  shuffle_enabled: "{{ 'enable_shuffle' in shuffle }}"
+  playlist_shuffle_options: !input shuffle
+  account_options: !input activate_feature_multi_account
+  selected_account: !input account_name
+  destination_player: !input media_player
+  spotify_account_player: !input spotify_player
+  switch_playlist_on_destination: !input start_configured_playlist
+  spotify_on_destination: >-
+    {% set source = state_attr(spotify_account_player, 'source') | default('', true) | lower | trim %}
+    {% set destination_name = state_attr(destination_player, 'friendly_name') | default('', true) | lower | trim %}
+    {% set spotify_track = state_attr(spotify_account_player, 'media_content_id') | default('', true) %}
+    {% set destination_track = state_attr(destination_player, 'media_content_id') | default('', true) %}
+    {% set spotify_app = (state_attr(destination_player, 'app_name') | default('', true) | lower) == 'spotify'
+      or (destination_track | string).startswith('spotify:') %}
+    {{ is_state(destination_player, 'playing') and spotify_app
+       and ((source != '' and source == destination_name)
+            or (spotify_track != '' and spotify_track == destination_track)) }}
+  configured_uri: !input uri
+  configured_repeat: !input repeat
+  attempt_limit: !input max_attempts
+  confirm_timeout: !input verification_timeout
+  buffer_grace: !input buffering_timeout
+  use_specific_account: "{{ 'use_specific_account' in account_options }}"
+  transfer_current_session: "{{ is_state(spotify_account_player, 'playing') and not (switch_playlist_on_destination and spotify_on_destination) }}"
+  selected_context_sensor: !input current_playlist_sensor
+  detected_context_sensor: >-
+    {% if selected_context_sensor is string and selected_context_sensor != '' %}
+      {{ selected_context_sensor }}
+    {% else %}
+      {% set ns = namespace(sensors=[]) %}
+      {% for entity in integration_entities('spotcast') %}
+        {% if entity.startswith('sensor.') and entity.endswith('_spotify_current_playlist')
+          and (not use_specific_account or config_entry_id(entity) == selected_account) %}
+          {% set ns.sensors = ns.sensors + [entity] %}
+        {% endif %}
+      {% endfor %}
+      {{ ns.sensors[0] if ns.sensors | count == 1 else '' }}
+    {% endif %}
+  current_playlist_uri: >-
+    {{ state_attr(detected_context_sensor, 'context_uri') | default('', true)
+       if detected_context_sensor != '' else '' }}
+  requested_playlist_uri: "{{ configured_uri | trim }}"
 sequence:
-  - if:
+- if:
+    - condition: template
+      value_template: >-
+        {{ is_state(spotify_account_player, 'playing') and spotify_on_destination
+           and current_playlist_uri != '' and current_playlist_uri == requested_playlist_uri }}
+  then:
+    - stop: Configured playlist is already playing on this speaker; keeping the current song.
+- if:
+  - condition: template
+    value_template: '{{ use_specific_account and (selected_account is not string or selected_account |
+      trim == '''') }}'
+  then:
+  - stop: Select a Spotcast account or disable Use specific account.
+    error: true
+- sequence: !input before_playback_actions
+- variables:
+    playback_confirmed: false
+- repeat:
+    sequence:
+    - variables:
+        request_succeeded: false
+    - choose:
+      - conditions: '{{ transfer_current_session and use_specific_account }}'
+        sequence:
+        - action: spotcast.transfer_playback
+          data:
+            media_player:
+              entity_id: '{{ destination_player }}'
+            account: '{{ selected_account }}'
+        - variables:
+            request_succeeded: true
+      - conditions: '{{ transfer_current_session }}'
+        sequence:
+        - action: spotcast.transfer_playback
+          data:
+            media_player:
+              entity_id: '{{ destination_player }}'
+        - variables:
+            request_succeeded: true
+      - conditions: '{{ use_specific_account }}'
+        sequence:
+        - action: spotcast.play_media
+          data:
+            media_player:
+              entity_id: '{{ destination_player }}'
+            account: '{{ selected_account }}'
+            spotify_uri: '{{ configured_uri }}'
+            data:
+              shuffle: '{{ ''enable_shuffle'' in playlist_shuffle_options }}'
+              repeat: '{{ configured_repeat }}'
+        - variables:
+            request_succeeded: true
+      default:
+      - action: spotcast.play_media
+        data:
+          media_player:
+            entity_id: '{{ destination_player }}'
+          spotify_uri: '{{ configured_uri }}'
+          data:
+            shuffle: '{{ ''enable_shuffle'' in playlist_shuffle_options }}'
+            repeat: '{{ configured_repeat }}'
+      - variables:
+          request_succeeded: true
+      continue_on_error: true
+    - delay:
+        seconds: 2
+    - wait_template: |-
+        {% set source = state_attr(spotify_account_player, 'source') | default('', true) | lower | trim %}
+        {% set destination_name = state_attr(destination_player, 'friendly_name') | default('', true) | lower | trim %}
+        {% set current_track = state_attr(spotify_account_player, 'media_content_id') | default('', true) %}
+        {% set destination_track = state_attr(destination_player, 'media_content_id') | default('', true) %}
+        {% set spotify_app = (state_attr(destination_player, 'app_name') | default('', true) | lower) == 'spotify'
+          or (destination_track | string).startswith('spotify:') %}
+        {{ request_succeeded and is_state(destination_player, 'playing') and spotify_app
+           and ((source != '' and source == destination_name)
+                or (current_track != '' and current_track == destination_track)) }}
+      timeout:
+        seconds: '{{ confirm_timeout | int }}'
+      continue_on_timeout: true
+    - variables:
+        playback_confirmed: '{{ wait.completed }}'
+    - if:
       - condition: template
-        value_template:
-          "{{ 'use_specific_account' in activate_feature_multi_account
-          }}"
-    then:
-      - choose:
-          - conditions:
-              - condition: state
-                entity_id: !input spotify_player
-                state: playing
-            sequence:
-              - service: spotcast.transfer_playback
-                data:
-                  media_player:
-                    entity_id: "{{ media_player }}"
-                  account: "{{ account_name }}"
-        default:
-          - service: spotcast.play_media
-            data:
-              spotify_uri: "{{ uri }}"
-              media_player:
-                entity_id: "{{ media_player }}"
-              account: "{{ account_name }}"
-              data:
-                shuffle: "{{ shuffle_enabled }}"
-                repeat: "{{ repeat }}"
-    else:
-      - choose:
-          - conditions:
-              - condition: state
-                entity_id: !input spotify_player
-                state: playing
-            sequence:
-              - service: spotcast.transfer_playback
-                data:
-                  media_player:
-                    entity_id: "{{ media_player }}"
-        default:
-          - service: spotcast.play_media
-            data:
-              spotify_uri: "{{ uri }}"
-              media_player:
-                entity_id: "{{ media_player }}"
-              data:
-                shuffle: "{{ shuffle_enabled }}"
-                repeat: "{{ repeat }}"
+        value_template: '{{ request_succeeded and not playback_confirmed and is_state(destination_player,
+          ''buffering'') }}'
+      then:
+      - wait_template: |-
+          {% set source = state_attr(spotify_account_player, 'source') | default('', true) | lower | trim %}
+          {% set destination_name = state_attr(destination_player, 'friendly_name') | default('', true) | lower | trim %}
+          {% set current_track = state_attr(spotify_account_player, 'media_content_id') | default('', true) %}
+          {% set destination_track = state_attr(destination_player, 'media_content_id') | default('', true) %}
+          {% set spotify_app = (state_attr(destination_player, 'app_name') | default('', true) | lower) == 'spotify'
+            or (destination_track | string).startswith('spotify:') %}
+          {{ request_succeeded and is_state(destination_player, 'playing') and spotify_app
+             and ((source != '' and source == destination_name)
+                  or (current_track != '' and current_track == destination_track)) }}
+        timeout:
+          seconds: '{{ buffer_grace | int }}'
+        continue_on_timeout: true
+      - variables:
+          playback_confirmed: '{{ wait.completed }}'
+    until: '{{ playback_confirmed or repeat.index >= (attempt_limit | int) }}'
+- if:
+  - condition: template
+    value_template: '{{ not playback_confirmed }}'
+  then:
+  - stop: Spotify playback could not be confirmed after the configured number of attempts. See the script
+      trace for request errors.
+    error: true
 mode: queued
+max: 10
